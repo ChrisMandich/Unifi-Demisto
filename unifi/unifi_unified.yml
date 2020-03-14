@@ -1,0 +1,391 @@
+category: Network Security
+commonfields:
+  id: 6cefc02e-65c7-42b0-9d50-3a0eae7ff72b
+  version: -1
+configuration:
+- additionalinfo: Please provide port for Controller.
+  defaultvalue: https://unifi.controller.net:8443
+  display: Server URL (e.g. https://unifi.controller.net:8443)
+  name: base_url
+  required: true
+  type: 0
+- display: Username
+  name: credentials
+  required: true
+  type: 9
+- display: Ignore Insecure Request Warning
+  name: insecure
+  required: false
+  type: 8
+- defaultvalue: '0'
+  display: First Event Time in EPOCH
+  name: first_fetch_time
+  required: false
+  type: 0
+- defaultvalue: default
+  display: Controller Site Name for fetch
+  name: site
+  required: false
+  type: 0
+description: This is the Unifi Controller integration
+detaileddescription: |-
+  ## Unifi Integration
+  - Integration Fetches  Events from UNIFI Controller and add's them as incidents.
+display: UNIFI Controller
+name: 6cefc02e-65c7-42b0-9d50-3a0eae7ff72b
+script:
+  commands:
+  - arguments:
+    - default: false
+      description: 'User ID returned in event data. '
+      isArray: false
+      name: user_id
+      required: true
+      secret: false
+    - default: false
+      description: 'Name of site for user. '
+      isArray: false
+      name: site_name
+      required: true
+      secret: false
+    deprecated: false
+    description: Return user details based on User Id.
+    execution: false
+    name: unifi-get-user-details
+  - deprecated: false
+    description: List all sites on controller.
+    execution: false
+    name: unifi-get-site-list
+  - arguments:
+    - default: false
+      description: 'Name of site to query. '
+      isArray: false
+      name: site_name
+      required: true
+      secret: false
+    deprecated: false
+    description: Return all users from Unifi Controller.
+    execution: false
+    name: unifi-get-users-list
+  - arguments:
+    - default: false
+      description: 'Name of site to query. '
+      isArray: false
+      name: site_name
+      required: true
+      secret: false
+    deprecated: false
+    description: Return all clients from Unifi Controller.
+    execution: false
+    name: unifi-get-clients-list
+  dockerimage: demisto/python3:3.7.4.2245
+  feed: false
+  isfetch: true
+  longRunning: false
+  longRunningPort: false
+  runonce: false
+  script: |-
+    # noinspection PyUnresolvedReferences
+    import json
+    # noinspection PyUnresolvedReferences
+    from datetime import datetime
+
+    import urllib3
+    from requests import Session
+
+    # noinspection PyUnresolvedReferences
+
+
+    # noinspection PyUnresolvedReferences
+
+
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    DATE_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
+
+    def _response_error(message, response):
+        """
+
+        :param message:
+        :param response:
+        :return:
+        """
+        if response.status_code == 200:
+            return
+        raise Exception(
+            f"""
+    Message:{message}.
+    Response code returned:{response.status_code}.
+            """
+        )
+
+
+    class Unifi:
+        def __init__(
+                self,
+                username,
+                password,
+                base_url,
+                site,
+                insecure
+        ):
+            """
+            Class Initializes session with UNIFI Controller
+            :param username: controller username to authenticate session.
+            :param password: controller password to authenticate session
+            :param base_url: controller bse URL (ex: https://controll.unifi.com:8443)
+            :param site: Controller site for alerts (ex: default)
+            :param insecure: Ignore Insecure Request Warning
+            """
+            self._creds = {
+                'username': username,
+                'password': password
+            }
+            self.base_url = base_url
+            self.site = site
+            self.session = self._login(insecure)
+
+        def _api_request(self, url, error_message):
+            """
+            Return JSON data from Controller Request
+            :param url: URL for API Request
+            :param error_message: Error message for error
+            :return: Returns JSON data from request
+            """
+            headers = {'Content-Type': 'application/json'}
+            response = self.session.get(url, headers=headers)
+            _response_error(error_message, response)
+            return response.json()['data']
+
+        # Authenticate to UNIFI, return session after successful authentication
+        def _login(self, session_verify):
+            """
+            Authenticate with UNIFI Controller
+            :param session_verify: Verify SSL Certificate
+            :return: Return established session
+            """
+            login_api = urljoin(self.base_url, '/api/login')
+
+            # Auth data
+            auth = json.dumps({**self._creds, **{'remember': False, 'strict': True}})
+
+            # Create Session and Login to Controller
+            session = Session()
+            response = session.post(login_api, data=auth, verify=session_verify)
+            _response_error(f"Failed to authenticate", response)
+
+            return session
+
+        # logout of UNIFI, return session after successful authentication
+        def logout(self):
+            """
+            Logout of UNIFI Controller session
+            """
+            logout_api = urljoin(self.base_url, '/api/logout')
+
+            response = self.session.post(logout_api)
+            _response_error(f"Failed to logout", response)
+
+        def get_clients(self, site_name):
+            """
+            Return all clients from Unifi Controller for specified site
+            :param site_name: Name of the site to query
+            :return: Return list of clients
+            """
+            clients_url = urljoin(self.base_url, f"/api/s/{site_name}/stat/sta")
+            return self._api_request(clients_url, f"`get_clients` Failed\r\nurl: {clients_url}")
+
+        def get_sites(self):
+            """
+            Return all Site from Unifi Controller
+            :return: Return list of sites
+            """
+            site_url = urljoin(self.base_url, f"/api/self/sites")
+            return self._api_request(site_url, f"`get_sites` Failed\r\nurl: {site_url}")
+
+        def get_users(self, site_name):
+            """
+            Return list of users
+            :param site_name: Name of the site to query
+            :return: Return list of users
+            """
+            users_url = urljoin(self.base_url, f"/api/s/{site_name}/list/user")
+            return self._api_request(users_url, f"`get_users` Failed\r\nurl: {users_url}")
+
+        def get_user_details(self, site_name, user_id):
+            """
+            Return details for specified user
+            :param site_name: Name of the site to query
+            :param user_id: User ID returned in event data
+            :return: Return user details in list
+            """
+            request_user = urljoin(self.base_url, f"/api/s/{site_name}/stat/user/{user_id}")
+            return self._api_request(request_user, f"`get_user_details` Failed\r\nurl: {request_user}")
+
+
+        def get_alarms(self):
+            """
+            Using established session, collect alarms from Console
+            :return: Return list of alarms from controller
+            """
+            alarms_api = urljoin(self.base_url, f"/api/s/{self.site}/stat/alarm")
+            return self._api_request(alarms_api, f"`geT_alarms` Failed\r\nurl: {alarms_api}")
+
+        def get_new_alarms(self, earliest_timestamp, latest_timestamp):
+            """
+            Get Alarms between earliest and latest epoch time.
+            :param earliest_timestamp: Earliest alert epoch time
+            :param latest_timestamp: Latest alert epoch time
+            :return: Return all events between earliest and latest
+            """
+            alarm_data = self.get_alarms
+            array_alarms = []
+
+            for alarm in alarm_data:
+                if alarm['key'] == 'EVT_IPS_IpsAlert' and 'timestamp' in alarm and (
+                        int(earliest_timestamp) < int(alarm['timestamp']) < int(latest_timestamp)):
+                    array_alarms.append(alarm)
+            return array_alarms
+
+
+    def unifi_get_users_list(unifi_session, site_name):
+        """
+        Get all users for specified UNIFI Controller site
+        :param unifi_session: Unifi Session from Unifi class
+        :param site_name: Name of the site to query
+        """
+        result = unifi_session.get_users(site_name)
+        markdown = tableToMarkdown("Unifi User List", result)
+        return_outputs(markdown, {"ContentsFormat": formats['json'], "Contents": json.dumps(result)})
+
+
+    def unifi_get_clients_list(unifi_session, site_name):
+        """
+        Get client list from UNIFI Controller for specified site name
+        :param unifi_session: Unifi Session from Unifi class
+        :param site_name: Name of the site to query
+        """
+        result = unifi_session.get_clients(site_name)
+        markdown = tableToMarkdown("Unifi Client List", result)
+        return_outputs(markdown, {"ContentsFormat": formats['json'], "Contents": json.dumps(result)})
+
+
+    def unifi_get_site_list(unifi_session):
+        """
+        Get all sites from UNIFI Controller
+        :param unifi_session: Unifi Session from Unifi class
+        """
+        result = unifi_session.get_sites()
+        markdown = tableToMarkdown("Unifi Site List", result)
+        return_outputs(markdown, {"ContentsFormat": formats['json'], "Contents": json.dumps(result)})
+
+
+    def unifi_get_user_details(unifi_session, user_id, site_name):
+        """
+        Get user details for specified user id and site name
+        :param unifi_session: Unifi Session from Unifi class
+        :param user_id: User ID returned in event data
+        :param site_name: Name of the site to query
+        """
+        user_details = unifi_session.get_user_details(site_name, user_id)
+        markdown = tableToMarkdown("User Details", user_details)
+        return_outputs(markdown, {"ContentsFormat": formats['json'], "Contents": json.dumps(user_details)})
+
+
+    def test_module(unifi_session):
+        """
+        Test Module for Demisto
+        :param unifi_session: Unifi Session from Unifi class
+        :return: Return 'OK' if success
+        """
+        if unifi_session.base_url:
+            return "ok"
+
+
+    def fetch_incidents(unifi_session, first_fetch_time):
+        """
+        Fetch incident from Unifi Controller (Alerts)
+        :param unifi_session: Unifi Session from Unifi class
+        :param first_fetch_time:
+        :return:
+        """
+        if 'last_fetch' in demisto.getLastRun():
+            utc_dt = datetime.strptime(demisto.getLastRun()['last_fetch'], DATE_FORMAT)
+            earliest_timestamp = int((utc_dt.replace(tzinfo=None) - datetime(1970, 1, 1)).total_seconds())
+        else:
+            earliest_timestamp = int(first_fetch_time)
+
+        latest_timestamp = int((datetime.now() - datetime(1970, 1, 1)).total_seconds())
+        string_latest_timestamp = str(time.strftime(DATE_FORMAT, time.gmtime(latest_timestamp)))
+
+        # Collect alerts between earliest and latest timestamps.
+        alerts = unifi_session.get_new_alarms(earliest_timestamp, latest_timestamp)
+
+        # Collect incidents to array.
+        incidents = []
+        for alert in alerts:
+            incident = {
+                'name': alert['catname'],
+                'occured': alert['datetime'],
+                'rawJSON': json.dumps(alert)
+            }
+            incidents.append(incident)
+
+        return incidents, {'last_fetch': string_latest_timestamp}
+
+
+    def main():
+        """
+            PARSE AND VALIDATE INTEGRATION PARAMS
+        """
+        username = demisto.params()['credentials']['identifier']
+        password = demisto.params()['credentials']['password']
+        base_url = urljoin(demisto.params()['base_url'])
+        site = demisto.params()['site']
+        insecure = not demisto.params()['insecure']
+        first_fetch_time = demisto.params()['first_fetch_time']
+        user_id = ""
+        site_name = ""
+
+        if 'user_id' in demisto.args():
+            user_id = demisto.args()['user_id']
+        if 'site_name' in demisto.args():
+            site_name = demisto.args()['site_name']
+
+        LOG(f'Command being called is {demisto.command()}')
+        try:
+            unifi_session = Unifi(
+                username=username,
+                password=password,
+                base_url=base_url,
+                site=site,
+                insecure=insecure,
+            )
+            if demisto.command() == 'test-module':
+                # This is the call made when pressing the integration Test button.
+                result = test_module(unifi_session)
+                demisto.results(result)
+            elif demisto.command() == 'fetch-incidents':
+                # Set and define the fetch incidents command to run after activated via integration settings.
+                incidents, last_fetch = fetch_incidents(unifi_session, first_fetch_time)
+                demisto.setLastRun(last_fetch)
+                demisto.incidents(incidents)
+            elif demisto.command() == 'unifi-get-clients-list':
+                unifi_get_clients_list(unifi_session, site_name)
+            elif demisto.command() == 'unifi-get-site-list':
+                unifi_get_site_list(unifi_session)
+            elif demisto.command() == 'unifi-get-user-details':
+                unifi_get_user_details(unifi_session, user_id, site_name)
+            elif demisto.command() == 'unifi-get-users-list':
+                unifi_get_users_list(unifi_session, site_name)
+            unifi_session.logout()
+        # Log exceptions
+        except Exception as e:
+            return_error(f'Failed to execute {demisto.command()} command. Error: {str(e)}')
+
+
+    if __name__ in ('__main__', '__builtin__', 'builtins'):
+        main()
+  subtype: python3
+  type: python
+image: data:image/png;base64,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

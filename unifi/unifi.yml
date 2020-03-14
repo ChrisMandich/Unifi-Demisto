@@ -1,0 +1,86 @@
+category: Network Security
+commonfields:
+  id: 6cefc02e-65c7-42b0-9d50-3a0eae7ff72b
+  version: -1
+configuration:
+- additionalinfo: Please provide port for Controller.
+  defaultvalue: https://unifi.controller.net:8443
+  display: Server URL (e.g. https://unifi.controller.net:8443)
+  name: base_url
+  required: true
+  type: 0
+- display: Username
+  name: credentials
+  required: true
+  type: 9
+- display: Ignore Insecure Request Warning
+  name: insecure
+  required: false
+  type: 8
+- defaultvalue: '0'
+  display: First Event Time in EPOCH
+  name: first_fetch_time
+  required: false
+  type: 0
+- defaultvalue: default
+  display: Controller Site Name for fetch
+  name: site
+  required: false
+  type: 0
+description: This is the Unifi Controller integration
+display: UNIFI Controller
+name: 6cefc02e-65c7-42b0-9d50-3a0eae7ff72b
+script:
+  commands:
+  - arguments:
+    - default: false
+      description: 'User ID returned in event data. '
+      isArray: false
+      name: user_id
+      required: true
+      secret: false
+    - default: false
+      description: 'Name of site for user. '
+      isArray: false
+      name: site_name
+      required: true
+      secret: false
+    deprecated: false
+    description: Return user details based on User Id.
+    execution: false
+    name: unifi-get-user-details
+  - deprecated: false
+    description: List all sites on controller.
+    execution: false
+    name: unifi-get-site-list
+  - arguments:
+    - default: false
+      description: 'Name of site to query. '
+      isArray: false
+      name: site_name
+      required: true
+      secret: false
+    deprecated: false
+    description: Return all users from Unifi Controller.
+    execution: false
+    name: unifi-get-users-list
+  - arguments:
+    - default: false
+      description: 'Name of site to query. '
+      isArray: false
+      name: site_name
+      required: true
+      secret: false
+    deprecated: false
+    description: Return all clients from Unifi Controller.
+    execution: false
+    name: unifi-get-clients-list
+  dockerimage: demisto/python3:3.7.4.2245
+  feed: false
+  isfetch: true
+  longRunning: false
+  longRunningPort: false
+  runonce: false
+  script: '-'
+  subtype: python3
+  type: python

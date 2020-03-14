@@ -1,3 +1,9 @@
+# Manual Addition
+CommonServerPython.py
+CommonServerUserPython.py
+demistomock.py
+.idea/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
