@@ -29,3 +29,14 @@ Demisto integration for Unifi Controller. Integration allows you to pull in cont
  4. Select: Test, If fails validate Server URL, Username and Password. 
  5. Select: Done
  6. Test playground commands
+## Screenshots 
+### Setup
+![Setup image](images/UNIFI-Controller-Integration-Config.png)
+### unifi-get-site-list
+![Setup image](images/unifi-get-site-list.png)
+### unifi-get-user-details
+![Setup image](images/unifi-get-user-details.png)
+### unifi-get-users-list
+![Setup image](images/unifi-get-users-list.png)
+### unifi-get-clients-list
+![Setup image](images/unifi-get-clients-list.png)
