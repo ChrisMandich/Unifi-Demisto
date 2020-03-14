@@ -238,10 +238,10 @@ script:
             :param latest_timestamp: Latest alert epoch time
             :return: Return all events between earliest and latest
             """
-            alarm_data = self.get_alarms
+            alarms = self.get_alarms()
             array_alarms = []
 
-            for alarm in alarm_data:
+            for alarm in alarms:
                 if alarm['key'] == 'EVT_IPS_IpsAlert' and 'timestamp' in alarm and (
                         int(earliest_timestamp) < int(alarm['timestamp']) < int(latest_timestamp)):
                     array_alarms.append(alarm)
@@ -298,8 +298,10 @@ script:
         :param unifi_session: Unifi Session from Unifi class
         :return: Return 'OK' if success
         """
+        result = False
         if unifi_session.base_url:
-            return "ok"
+            result = "ok"
+        return result
 
 
     def fetch_incidents(unifi_session, first_fetch_time):
@@ -366,7 +368,7 @@ script:
                 result = test_module(unifi_session)
                 demisto.results(result)
             elif demisto.command() == 'fetch-incidents':
-                # Set and define the fetch incidents command to run after activated via integration settings.
+                # Set and define the fetch incidents command to run after activated via integration settings
                 incidents, last_fetch = fetch_incidents(unifi_session, first_fetch_time)
                 demisto.setLastRun(last_fetch)
                 demisto.incidents(incidents)

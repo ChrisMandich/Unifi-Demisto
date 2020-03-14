@@ -70,7 +70,6 @@ class Unifi:
         _response_error(error_message, response)
         return response.json()['data']
 
-    # Authenticate to UNIFI, return session after successful authentication
     def _login(self, session_verify):
         """
         Authenticate with UNIFI Controller
@@ -151,9 +150,10 @@ class Unifi:
         :param latest_timestamp: Latest alert epoch time
         :return: Return all events between earliest and latest
         """
+        alarms = self.get_alarms()
         array_alarms = []
 
-        for alarm in self.get_alarms():
+        for alarm in alarms:
             if alarm['key'] == 'EVT_IPS_IpsAlert' and 'timestamp' in alarm and (
                     int(earliest_timestamp) < int(alarm['timestamp']) < int(latest_timestamp)):
                 array_alarms.append(alarm)
