@@ -157,7 +157,6 @@ script:
             _response_error(error_message, response)
             return response.json()['data']
 
-        # Authenticate to UNIFI, return session after successful authentication
         def _login(self, session_verify):
             """
             Authenticate with UNIFI Controller
