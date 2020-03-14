@@ -2,7 +2,7 @@
 CommonServerPython.py
 CommonServerUserPython.py
 demistomock.py
-.idea
+.idea/**
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
